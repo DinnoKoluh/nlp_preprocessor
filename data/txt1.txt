@@ -1,0 +1,12 @@
+In this m.p.h.
+Mr. perm.
+ project, you will design and .?impl,,,ement a preprocessing toolkit for Turkish (Turkish
+students in the class) or English (non-Turkish students in the class). The   processing functionalities.  
+a,b,c, $45.78 "bills?"
+
+,,..dinno.koluh@gmail.com..?,., I'm here http://www.stanford.edu
+
+The Treebank tokenizer uses regular expressions to tokenize text as in Penn Treebank.
+This  by Robert McIntyre and available at http://www.cis.upenn.edu/~treebank/tokenizer.sed.
+God is Great! I won a lottery.
+
