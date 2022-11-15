@@ -12,7 +12,17 @@ class NLP:
     lex = ['m.p.h.', 'mr.', 'Mr.', 'Mrs.', 'i.e.', 'fig.', 'Fig.', 'al.']
 
     def __init__(self, text):
+        self.reset()
         self.text = text
+    
+    def reset(self):
+        self.rough_tokens = []
+        self.tokens = []
+        self.sentences = []
+        self.text = []
+        self.vocabulary = []
+        self.word_frequency = {}
+        self.stems = []
 
     def tokenize_rough(self):
         splitters = [' ', '\n'] # chars used for splitting words
@@ -33,25 +43,14 @@ class NLP:
                 continue
             word = word + self.text[i] # adding letters to words
             i = i + 1
-        self.rough_tokens.append(word) # appending the last word in a text
+        #.rough_tokens.append(word) # appending the last word in a text
     
     def tokenize(self):
         self.tokenize_rough() # do the rough tokenization first
-        self.tokens = self.rough_tokens
+        self.tokens = list(self.rough_tokens) # for a shallow copy
         i = 0
         while i < len(self.tokens):
-            word = self.tokens[i] 
-            # check if word is in lexicon
-            if self.is_in_lex(word):
-                i = i + 1
-                continue    
-            
-            #websites
-            if self.has_web_address(word):
-               #puncs.remove('.')
-               #puncs.remove(':')
-                i = i + 1
-            
+            word = self.tokens[i]    
             sub_tokens = self.split_token(word, self.puncs) # where to store subtokens found in a word
             
             #inserting sub_tokens into tokens
@@ -71,8 +70,8 @@ class NLP:
         sentence = ''
         i = 0
         while i < len(self.rough_tokens):
-            if self.has_punctuation(self.rough_tokens[i]):
-                if (self.is_in_lex(self.rough_tokens[i]) or self.has_email(self.rough_tokens[i]) or
+            if self.has_punctuation_at_end(self.rough_tokens[i]): ## go back if lex not working
+                if (len(self.get_token_lex_substring(self.rough_tokens[i])) > 0 or self.has_email(self.rough_tokens[i]) or
                     self.has_abbreviation(self.rough_tokens[i]) or self.has_number(self.rough_tokens[i])): # if token is in lexicon or is an email address
                     sentence = sentence + self.rough_tokens[i] + ' '
                     i = i + 1
@@ -83,6 +82,58 @@ class NLP:
             else:
                 sentence = sentence + self.rough_tokens[i] + ' ' # concatenating tokens with whitespace
             i = i + 1
+
+    # function to split a rough token
+    def split_token(self, token, puncs):
+        sub_tokens = [] # where to store subtokens found in a word
+        j = 0
+        if self.has_number(token): return sub_tokens # if token is number with ., return empty 
+        if self.has_clitic(token): return self.split_by_char(token, '\'', self.puncs) # if token has a clitic split it 
+        if self.has_abbreviation(token): return sub_tokens
+        if self.has_email(token): return self.split_by_char(token, '@', self.email_puncs)
+        substr = self.get_token_lex_substring(token)
+        if len(substr) > 0: return self.split_by_string(token, substr, self.email_puncs)
+        #if self.has_web_address(token): return sub_tokens
+
+        while j < len(token):
+            if token[j] in puncs:
+                if j > 0: sub_tokens.append(token[0:j]) # insert left over word only if its length is bigger than 0
+                sub_tokens.append(token[j]) # insert punc into sub tokens
+                token = token[j+1:] # the new word is the leftover
+                j = -1 # reset counter to -1 (it will be zero in the next line)
+            j = j + 1
+        if len(token) > 0: sub_tokens.append(token) # add the last part of the word to sub_tokens if it is not empty
+        return sub_tokens
+
+    # split token based on desired character
+    def split_by_char(self, token, character, puncs):
+        sub_tokens = []
+        i = 0
+        # Find the position of the first appearance of character
+        while i < len(token):
+            if i > 0 and i < (len(token) - 1) and token[i] == character:
+                if self.is_letter(token[i-1]) and self.is_letter(token[i+1]):
+                    break
+            i = i + 1
+        # done recursively for an arbitrary number of characters in token
+        sub_tokens1 = self.split_token(token[0:i], puncs) # take the string up to the first appearance of character and split it
+        sub_tokens2 = self.split_token(token[i+1:], puncs) # take the string after the first appearance of character and split it
+
+        # sub_tokens1[0:-1] -> subtokens before the first appearance of character
+        # sub_tokens1[-1] + character + sub_tokens2[0] -> the last element of subtokens_1 and 
+            # first element of subtokens_2 concatenated together with the character in middle (e.g. example + @ + com)
+        # sub_tokens2[1:] -> subtokens after the first appearance of character
+        # e.g. [',', ':'] + [example + @ + gmail.com] + [':']
+        return sub_tokens1[0:-1] + [sub_tokens1[-1] + character + sub_tokens2[0]] + sub_tokens2[1:]
+    
+    # split token depending on string (e.g. "hello,Mr.," = ["hello", ",", "Mr.", ","])
+    def split_by_string(self, token, string, puncs):
+        # Find the position of the first appearance of string
+        pos = token.find(string)
+        # done recursively for an arbitrary number of strings in token
+        sub_tokens1 = self.split_token(token[0:pos], puncs) # tokenize again up to first appearance of string
+        sub_tokens2 = self.split_token(token[pos+len(string):], puncs) # tokenize again after the first appearance of string
+        return sub_tokens1 + [string] + sub_tokens2
 
     def make_vocabulary(self, sorted_voc=False):
         if len(self.tokens) == 0:
@@ -98,46 +149,6 @@ class NLP:
         if sorted_voc:
             self.vocabulary.sort()
 
-    def split_token(self, token, puncs):
-        sub_tokens = [] # where to store subtokens found in a word
-        j = 0
-        if self.has_number(token): return sub_tokens # if token is number with ., return empty 
-        if self.has_clitic(token): return self.split_by_char(token, '\'', self.puncs) # if token has a clitic split it 
-        if self.has_abbreviation(token): return sub_tokens
-        if self.has_email(token): return self.split_by_char(token, '@', self.email_puncs)
-        #if self.has_web_address(token): return sub_tokens
-
-        while j < len(token):
-            if token[j] in puncs:
-                if j > 0: sub_tokens.append(token[0:j]) # insert left over word only if its length is bigger than 0
-                sub_tokens.append(token[j]) # insert punc into sub tokens
-                token = token[j+1:] # the new word is the leftover
-                j = -1 # reset counter to -1 (it will be zero in the next line)
-            j = j + 1
-        if len(token) > 0: sub_tokens.append(token) # add the last part of the word to sub_tokens if it is not empty
-        return sub_tokens
-
-    def split_by_char(self, token, character, puncs):
-        sub_tokens = []
-        i = 0
-        # Find the position of the first clitic
-        while i < len(token):
-            if i > 0 and i < (len(token) - 1) and token[i] == character:
-                if self.is_letter(token[i-1]) and self.is_letter(token[i+1]):
-                    break
-            i = i + 1
-        # done recursively for an arbitrary number of clitics in token
-        sub_tokens1 = self.split_token(token[0:i], puncs) # take the string up to the first clitic and split it
-        sub_tokens2 = self.split_token(token[i+1:], puncs) # take the string after the first clitic and split it
-        sub_tokens = sub_tokens + sub_tokens1[0:-1] # subtokens before the first clitic
-        # the last element of subtokens before the first clitic and first element of subtokens after the first clitic form that clitic
-        sub_tokens.append(sub_tokens1[-1] + character + sub_tokens2[0]) 
-        sub_tokens = sub_tokens + sub_tokens2[1:] # subtokens after the first clitic
-        return sub_tokens
-    
-    def split_by_string(self, token, str, puncs):
-        print("dinno")
-
 # HELPER FUNCTIONS
     # if a character is a letter
     def is_letter(self, c):
@@ -151,12 +162,12 @@ class NLP:
     def is_upper_case(self, c):
         return c >= 'A' and c <= 'Z'
 
-    # if a token has a substring that is in the lexicon
-    def is_in_lex(self, token):
+    # if token has an entry from lexicon as substring return it
+    def get_token_lex_substring(self, token):
         for l in self.lex:
             if l in token:
-                return True
-        return False
+                return l
+        return ''
 
     # if a token has a punctuation 
     def has_punctuation(self, token):
@@ -165,6 +176,11 @@ class NLP:
             if pun in token:
                 return True
         return False
+    
+    # if the last character of a token is a punctuation sign
+    def has_punctuation_at_end(self, token):
+        puncs = ['.', '!', '?']
+        return token[-1] in puncs
 
     # if a character is a number
     def is_number(self, c):
@@ -201,49 +217,3 @@ class NLP:
                     return True
             i = i + 1
         return False
-
-
-'''
-def split_clitic(self, token, puncs):
-        sub_tokens = []
-        i = 0
-        # Find the position of the first clitic
-        while i < len(token):
-            if i > 0 and i < (len(token) - 1) and token[i] == '\'':
-                if self.is_letter(token[i-1]) and self.is_letter(token[i+1]):
-                    break
-            i = i + 1
-        # done recursively for an arbitrary number of clitics in token
-        sub_tokens1 = self.split_token(token[0:i], puncs) # take the string up to the first clitic and split it
-        sub_tokens2 = self.split_token(token[i+1:], puncs) # take the string after the first clitic and split it
-        sub_tokens = sub_tokens + sub_tokens1[0:-1] # subtokens before the first clitic
-        # the last element of subtokens before the first clitic and first element of subtokens after the first clitic form that clitic
-        sub_tokens.append(sub_tokens1[-1] + '\'' + sub_tokens2[0]) 
-        sub_tokens = sub_tokens + sub_tokens2[1:] # subtokens after the first clitic
-        return sub_tokens
-
-def sentence_split1(text):
-    splitters = ['.', '!', '?']
-    sentences = [] # where to store all the words
-    word = '' # where to store a single word
-    i = 0
-    text = text.translate({ord('\n'): None})
-    while i < len(text):
-        j = 0
-        split = False # flag if we are going to split e.g. add a new token
-        while text[i] in splitters: # while the i-th character is among splitters keep splitting
-            if is_upper_case(text[i-1]): break
-            if i < len(text)-1 and text[i+1] != ' ': break
-            split = True
-            i = i + 1 # skip that position in text
-            if i == len(text):
-                break
-
-        if split:
-            sentences.append(word)
-            word = '' # reset for next word
-            continue
-        word = word + text[i] # adding letters to words
-        i = i + 1
-    return text, sentences
-'''
