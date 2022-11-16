@@ -1,3 +1,5 @@
+from lexicons import * # getting the lexicons for contractions and abbreviations
+
 class NLP:
     rough_tokens = []
     tokens = []
@@ -9,7 +11,6 @@ class NLP:
     puncs = ['.', ',', '!', '?', '(', ')', ':', ';', '"', '"', '\'']
     email_puncs = [',', '!', '?', '(', ')', ':', ';', '"', '"', '\'']
     web_puncs = [',', '!', '?', '(', ')', ';', '"', '"']
-    lex = ['m.p.h.', 'mr.', 'Mr.', 'Mrs.', 'i.e.', 'fig.', 'Fig.', 'al.']
 
     def __init__(self, text):
         self.reset()
@@ -43,7 +44,7 @@ class NLP:
                 continue
             word = word + self.text[i] # adding letters to words
             i = i + 1
-        #.rough_tokens.append(word) # appending the last word in a text
+        self.rough_tokens.append(word) # appending the last word in a text
     
     def tokenize(self):
         self.tokenize_rough() # do the rough tokenization first
@@ -137,6 +138,7 @@ class NLP:
 
     def make_vocabulary(self):
         self.is_tokenized()
+        self.expand_clitics()
 
         # adding tokens in a word frequency dictionary
         for token in self.tokens:
@@ -168,6 +170,31 @@ class NLP:
         for word in removed_words:
             del self.word_frequency[word]
 
+    def normalize(self):
+        print("to come")
+
+    def expand_clitics(self):
+        self.is_tokenized()
+        i = 0
+        while i < len(self.tokens):
+            # 
+            if self.tokens[i] in contractions_lex.keys():
+                expansion = contractions_lex[self.tokens[i]]
+                self.tokens = self.tokens[0:i] + expansion + self.tokens[i+1:]
+                i = i + len(expansion)
+            # in the case a token ends with 's expand it as 'is' (e.g. "there's" -> "there is")
+            elif len(self.tokens[i]) > 2 and self.tokens[i][-2:] == "'s":
+                expansion = [self.tokens[i][0:-2], 'is']
+                self.tokens = self.tokens[0:i] + expansion + self.tokens[i+1:]
+                i = i + 2
+
+            i = i + 1
+
+    def pipeline(self):
+        self.tokenize()
+        self.sentence_split()
+        self.expand_clitics()
+        self.clean_vocabulary()
 
 # HELPER FUNCTIONS
     # if text is not tokenized, tokenize it (used for sentence splitting and vocabulary making)
@@ -189,7 +216,7 @@ class NLP:
 
     # if token has an entry from lexicon as substring return it
     def get_token_lex_substring(self, token):
-        for l in self.lex:
+        for l in abbreviations_lex:
             if l in token:
                 return l
         return ''
