@@ -26,7 +26,6 @@ class NLP:
 
     def tokenize_rough(self):
         splitters = [' ', '\n'] # chars used for splitting words
-        #splitters = ['.', '!', '?']
         word = '' # where to store a single word
         i = 0
         while i < len(self.text):
@@ -38,6 +37,7 @@ class NLP:
                     break
 
             if split:
+                if word == '': continue # in the case we have an empty document with ' ' and '\n'
                 self.rough_tokens.append(word)
                 word = '' # reset for next word
                 continue
@@ -63,14 +63,13 @@ class NLP:
                 i = i + 1
 
     def sentence_split(self):
-        if len(self.rough_tokens) == 0:
-            print("Tokenize the text first!")
-            return
+        self.is_tokenized()
+
         # using the rough_tokens rebuilding the text again and splitting it into sentences based on rules
         sentence = ''
         i = 0
         while i < len(self.rough_tokens):
-            if self.has_punctuation_at_end(self.rough_tokens[i]): ## go back if lex not working
+            if self.has_punctuation_at_end(self.rough_tokens[i]):
                 if (len(self.get_token_lex_substring(self.rough_tokens[i])) > 0 or self.has_email(self.rough_tokens[i]) or
                     self.has_abbreviation(self.rough_tokens[i]) or self.has_number(self.rough_tokens[i])): # if token is in lexicon or is an email address
                     sentence = sentence + self.rough_tokens[i] + ' '
@@ -86,15 +85,16 @@ class NLP:
     # function to split a rough token
     def split_token(self, token, puncs):
         sub_tokens = [] # where to store subtokens found in a word
-        j = 0
+        # RULES
         if self.has_number(token): return sub_tokens # if token is number with ., return empty 
         if self.has_clitic(token): return self.split_by_char(token, '\'', self.puncs) # if token has a clitic split it 
         if self.has_abbreviation(token): return sub_tokens
         if self.has_email(token): return self.split_by_char(token, '@', self.email_puncs)
         substr = self.get_token_lex_substring(token)
         if len(substr) > 0: return self.split_by_string(token, substr, self.email_puncs)
-        #if self.has_web_address(token): return sub_tokens
+        if self.has_web_address(token): return sub_tokens
 
+        j = 0
         while j < len(token):
             if token[j] in puncs:
                 if j > 0: sub_tokens.append(token[0:j]) # insert left over word only if its length is bigger than 0
@@ -135,10 +135,10 @@ class NLP:
         sub_tokens2 = self.split_token(token[pos+len(string):], puncs) # tokenize again after the first appearance of string
         return sub_tokens1 + [string] + sub_tokens2
 
-    def make_vocabulary(self, sorted_voc=False):
-        if len(self.tokens) == 0:
-            print("Tokenize text first!")
-            return 
+    def make_vocabulary(self):
+        self.is_tokenized()
+
+        # adding tokens in a word frequency dictionary
         for token in self.tokens:
             if not(token in self.word_frequency.keys()): 
                 self.word_frequency[token] = self.tokens.count(token)
@@ -146,10 +146,35 @@ class NLP:
         self.word_frequency = dict(sorted(self.word_frequency.items(), key=lambda x: x[1], reverse=True))
         # make vocabulary
         self.vocabulary = list(self.word_frequency.keys())
-        if sorted_voc:
-            self.vocabulary.sort()
+        self.vocabulary.sort()
+    
+    # cleans vocabulary and word frequency of noisy tokens (e.g. removes '?', '..!', '...' )
+    def clean_vocabulary(self):
+        # in the case a vocabulary was not created
+        if len(self.vocabulary) == 0:
+            self.make_vocabulary()
+        i = 0
+        removed_words = []
+        while i < len(self.vocabulary):
+            character = self.vocabulary[i][0]
+            # if the first character of a token is a number or letter keep it in the dictionary, otherwise remove it
+            if self.is_letter(character) or self.is_number(character):
+                i = i + 1
+                continue
+            else:
+                removed_words.append(self.vocabulary[i])
+                self.vocabulary.remove(self.vocabulary[i])
+        # clean word frequency dictionary
+        for word in removed_words:
+            del self.word_frequency[word]
+
 
 # HELPER FUNCTIONS
+    # if text is not tokenized, tokenize it (used for sentence splitting and vocabulary making)
+    def is_tokenized(self):
+        if len(self.tokens) == 0:
+            self.tokenize()
+
     # if a character is a letter
     def is_letter(self, c):
         return self.is_lower_case(c) or self.is_upper_case(c)
