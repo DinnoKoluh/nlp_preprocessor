@@ -3,14 +3,16 @@ def get_text(txt):
     return f.read()
 
 def fun1(txt):
-    txt = txt.replace('“', '"')
-    txt = txt.replace('”', '"')
-    txt = txt.replace('’', '\'')
+    # txt = txt.replace('“', '"')
+    # txt = txt.replace('”', '"')
+    # txt = txt.replace('’', '\'')
+    txt = txt.replace('‘', '"')
+    txt = txt.replace('’', '"')
     i = 0
-    while i < len(txt):
-        if txt[i] == ',':
-            txt = txt[0:i+1] + '\n' + txt[i+2:]
-        i = i + 1
+    # while i < len(txt):
+    #     if txt[i] == ',':
+    #         txt = txt[0:i+1] + '\n' + txt[i+2:]
+    #     i = i + 1
     return txt
 
 

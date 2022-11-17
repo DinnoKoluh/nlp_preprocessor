@@ -1,4 +1,4 @@
-from lexicons import * # getting the lexicons for contractions and abbreviations
+from lexicons import * # getting the lexicons for contractions, abbreviations, stop-words
 from PorterStemmer import *
 
 class NLP:
@@ -6,6 +6,7 @@ class NLP:
     dirty_tokens = [] # tokens separated from punctuations but punctuations are still regarded as valid tokens
     tokens = [] # clean tokens where only tokens that begin with a number of letter are kept as valid tokens
     stemmed_tokens = [] # tokens obtained after the Porter stemming of clean tokens
+    pruned_tokens = [] # tokens for which stop-words were removed after stemming
     sentences = []
     text = []
     vocabulary = []
@@ -23,6 +24,7 @@ class NLP:
         self.tokens = []
         self.stemmed_tokens = []
         self.dirty_tokens = []
+        self.pruned_tokens = []
         self.sentences = []
         self.text = []
         self.vocabulary = []
@@ -31,6 +33,7 @@ class NLP:
     def tokenize_rough(self):
         splitters = [' ', '\n'] # chars used for splitting words
         word = '' # where to store a single word
+        self.rough_tokens = [] 
         i = 0
         while i < len(self.text):
             split = False # flag if we are going to split e.g. add a new token
@@ -200,15 +203,38 @@ class NLP:
         word_frequencies = dict(sorted(word_frequencies.items(), key=lambda x: x[1], reverse=True))
         return word_frequencies
 
-# FUNCTIONS ON TOKEN NORMALIZATION
-    def stem_tokens(self):
+# STOP-WORD REMOVING
+    def remove_stopwords(self, token_type = "stemmed"):
         """
-        Function to stem all the tokens using the Porter Stemmer.
+        Function to remove stop-words from clean tokens.
         """
+        self.is_tokenized()
         i = 0
+        self.pruned_tokens = [] # if run two times, not to append to already generated list
         while i < len(self.tokens):
+            if self.tokens[i] in stopword_lex:
+                i += 1
+                continue
+            else:
+                self.pruned_tokens.append(self.tokens[i])
+            i += 1
+        
+# FUNCTIONS ON TOKEN NORMALIZATION
+    def stem_tokens(self, token_type = "clean"):
+        """
+        Function to stem all the tokens using the Porter Stemmer. By default it stems
+        clean tokens, but with the token_type set to "pruned" it will stem tokens for which
+        stop-words were removed.
+        """
+        self.stemmed_tokens = []
+        to_add = self.tokens
+        if token_type == "pruned":
+            self.remove_stopwords()
+            to_add = self.pruned_tokens
+        i = 0
+        while i < len(to_add):
             stemmer = PorterStemmer()
-            self.stemmed_tokens.append(stemmer.stem(self.tokens[i]))
+            self.stemmed_tokens.append(stemmer.stem(to_add[i]))
             i = i + 1
         return self.stemmed_tokens
 
@@ -246,6 +272,7 @@ class NLP:
         """
         Function to clean dirty_tokens. A clean token is one that starts with a number or a letter.
         """
+        self.tokens = []
         i = 0
         while i < len(self.dirty_tokens):
             character = self.dirty_tokens[i][0]
