@@ -29,10 +29,10 @@ class PorterStemmer:
                 return True
         return False
 
-    # checks if a token ends with a doble consonant (e.g. "-bt", "-cc")
+    # checks if a token ends with a double consonant (e.g. "-bb", "-cc")
     def endswith_double_consonant(self, token):
         if len(token) >= 2:
-            if self.is_consonant(token, -1) and self.is_consonant(token, -2):
+            if self.is_consonant(token, -1) and self.is_consonant(token, -2) and token[-1] == token[-2]:
                 return True
             return False
         return False
@@ -99,7 +99,7 @@ class PorterStemmer:
             token = self.replace_ending(token, 'ies', 'i')
         elif token.endswith('ss'):
             token = self.replace_ending(token, 'ss', 'ss')
-        elif token.endswith('s'):
+        elif token.endswith('s') and len(token[0:-1]) > 1:
             token = self.replace_ending(token, 's', '')
         else:
             pass

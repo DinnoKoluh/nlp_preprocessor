@@ -2,13 +2,14 @@ from lexicons import * # getting the lexicons for contractions and abbreviations
 from PorterStemmer import *
 
 class NLP:
-    rough_tokens = []
-    tokens = []
+    rough_tokens = [] # tokens gathered after only removing whitespaces and newlines from text, useful for sentence reconstruction
+    dirty_tokens = [] # tokens separated from punctuations but punctuations are still regarded as valid tokens
+    tokens = [] # clean tokens where only tokens that begin with a number of letter are kept as valid tokens
+    stemmed_tokens = [] # tokens obtained after the Porter stemming of clean tokens
     sentences = []
     text = []
     vocabulary = []
-    word_frequency = {}
-    stems = []
+    # punctuation lists which are valid for a specific type of tokens
     puncs = ['.', ',', '!', '?', '(', ')', ':', ';', '"', '"', '\'']
     email_puncs = [',', '!', '?', '(', ')', ':', ';', '"', '"', '\'']
     web_puncs = [',', '!', '?', '(', ')', ';', '"', '"']
@@ -20,11 +21,11 @@ class NLP:
     def reset(self):
         self.rough_tokens = []
         self.tokens = []
+        self.stemmed_tokens = []
+        self.dirty_tokens = []
         self.sentences = []
         self.text = []
         self.vocabulary = []
-        self.word_frequency = {}
-        self.stems = []
 
     # rough tokenization where only whitespaces and newlines are removed from text
     def tokenize_rough(self):
@@ -51,44 +52,34 @@ class NLP:
     
     def tokenize(self):
         self.tokenize_rough() # do the rough tokenization first
-        self.tokens = list(self.rough_tokens) # for a shallow copy
+        self.dirty_tokens = list(self.rough_tokens) # for a shallow copy
         i = 0
-        while i < len(self.tokens):
-            word = self.tokens[i]    
+        while i < len(self.dirty_tokens):
+            word = self.dirty_tokens[i]    
             sub_tokens = self.split_token(word, self.puncs) # where to store subtokens found in a word
             
             #inserting sub_tokens into tokens
             if len(sub_tokens) > 0:
-                del self.tokens[i] # delete the current token where the sub tokens will be substituted
+                del self.dirty_tokens[i] # delete the current token where the sub tokens will be substituted
                 for item in sub_tokens:
-                    self.tokens.insert(i, item)
+                    self.dirty_tokens.insert(i, item)
                     i = i + 1
             else:
                 i = i + 1
-        self.expand_clitics() # expanding clitics after tokenization
+        # TOKEN NORMALIZATION
+        self.clean_tokens() # clean tokens of punctuations
+        self.expand_clitics() # clitics expansion before token lowering (for cases like I'd -> I would, i'd -> i'd)
+        self.lower_tokens() # case lowering for tokens
+        self.expand_clitics() # clitics expansion after token lowering (for cases like don't -> do not, Don't -> Don't)
+        self.stem_tokens() # stemming tokens
 
-    def sentence_split(self):
-        self.is_tokenized()
-
-        # using the rough_tokens rebuilding the text again and splitting it into sentences based on rules
-        sentence = ''
-        i = 0
-        while i < len(self.rough_tokens):
-            if self.has_punctuation_at_end(self.rough_tokens[i]):
-                if (len(self.get_token_lex_substring(self.rough_tokens[i])) > 0 or self.has_email(self.rough_tokens[i]) or
-                    self.has_abbreviation(self.rough_tokens[i]) or self.has_number(self.rough_tokens[i])): # if token is in lexicon or is an email address
-                    sentence = sentence + self.rough_tokens[i] + ' '
-                    i = i + 1
-                    continue
-                sentence = sentence + self.rough_tokens[i] # adding the last token in sentence
-                self.sentences.append(sentence) # adding sentence to sentences
-                sentence = '' # restarting sentence 
-            else:
-                sentence = sentence + self.rough_tokens[i] + ' ' # concatenating tokens with whitespace
-            i = i + 1
-
-    # function to split a rough token
+# FUNCTIONS ON TOKEN EDITING
     def split_token(self, token, puncs):
+        """
+        Main function which splits a single rough token into subtokens. 
+        For example the token "don't,be.:example@gmail.com" will be split as 
+        a list of the following subtokens ["don't", ",", "be", ".", ",", "example@gmail.com"].
+        """
         sub_tokens = [] # where to store subtokens found in a word
         # RULES
         if self.has_number(token): return sub_tokens # if token is number with ., return empty 
@@ -110,8 +101,13 @@ class NLP:
         if len(token) > 0: sub_tokens.append(token) # add the last part of the word to sub_tokens if it is not empty
         return sub_tokens
 
-    # split token based on desired character
     def split_by_char(self, token, character, puncs):
+        """
+        Split token based on desired character and list of punctuations. 
+        If for example we have the string "example@gmail.com,done" and the desired 
+        character as "@" and the punctuation list the list for emails (so, excluding ".")
+        the string will be split as ["example@gmail.com", ",", "done"].
+        """
         sub_tokens = []
         i = 0
         # Find the position of the first appearance of character
@@ -131,8 +127,12 @@ class NLP:
         # e.g. [',', ':'] + [example + @ + gmail.com] + [':']
         return sub_tokens1[0:-1] + [sub_tokens1[-1] + character + sub_tokens2[0]] + sub_tokens2[1:]
     
-    # split token depending on string (e.g. "hello,Mr.," = ["hello", ",", "Mr.", ","])
     def split_by_string(self, token, string, puncs):
+        """
+        Split token depending on desired string and list of punctuations.
+        If for example we have and abbreviation "Mr." inside a string like "hello,Mr.," 
+        the string will be split as follows ["hello", ",", "Mr.", ","].
+        """
         # Find the position of the first appearance of string
         pos = token.find(string)
         # done recursively for an arbitrary number of strings in token
@@ -140,52 +140,82 @@ class NLP:
         sub_tokens2 = self.split_token(token[pos+len(string):], puncs) # tokenize again after the first appearance of string
         return sub_tokens1 + [string] + sub_tokens2
 
-    def make_vocabulary(self):
+# SENTENCE SPLITTING
+    def sentence_split(self):
+        """
+        Splitting the input text into a list of sentences.
+        """
         self.is_tokenized()
-        self.expand_clitics()
-
-        # adding tokens in a word frequency dictionary
-        for token in self.tokens:
-            if not(token in self.word_frequency.keys()): 
-                self.word_frequency[token] = self.tokens.count(token)
-        # sorting word frequency
-        self.word_frequency = dict(sorted(self.word_frequency.items(), key=lambda x: x[1], reverse=True))
-        # make vocabulary
-        self.vocabulary = list(self.word_frequency.keys())
-        self.vocabulary.sort()
-    
-    # cleans vocabulary and word frequency of noisy tokens (e.g. removes '?', '..!', '...' )
-    def clean_vocabulary(self):
-        # in the case a vocabulary was not created
-        if len(self.vocabulary) == 0:
-            self.make_vocabulary()
+        # using the rough_tokens rebuilding the text again and splitting it into sentences based on rules
+        sentence = ''
         i = 0
-        removed_words = []
-        while i < len(self.vocabulary):
-            character = self.vocabulary[i][0]
-            # if the first character of a token is a number or letter keep it in the dictionary, otherwise remove it
-            if self.is_letter(character) or self.is_number(character):
-                i = i + 1
-                continue
+        while i < len(self.rough_tokens):
+            if self.has_punctuation_at_end(self.rough_tokens[i]):
+                if (len(self.get_token_lex_substring(self.rough_tokens[i])) > 0 or self.has_email(self.rough_tokens[i]) or
+                    self.has_abbreviation(self.rough_tokens[i]) or self.has_number(self.rough_tokens[i])): # if token is in lexicon or is an email address
+                    sentence = sentence + self.rough_tokens[i] + ' '
+                    i = i + 1
+                    continue
+                sentence = sentence + self.rough_tokens[i] # adding the last token in sentence
+                self.sentences.append(sentence) # adding sentence to sentences
+                sentence = '' # restarting sentence 
             else:
-                removed_words.append(self.vocabulary[i])
-                self.vocabulary.remove(self.vocabulary[i])
-        # clean word frequency dictionary
-        for word in removed_words:
-            del self.word_frequency[word]
+                sentence = sentence + self.rough_tokens[i] + ' ' # concatenating tokens with whitespace
+            i = i + 1
+        return self.sentences
 
+# VOCABULARY MAKING
+    def make_vocabulary(self, token_type = "clean"):
+        """
+        makes a sorted vocabulary from the available tokens with clean tokens by default
+        if token_type is set to "stemmed" then the vocabulary is made from stemmed tokens
+        """
+        self.is_tokenized()
+        to_add = self.tokens
+        if token_type == "stemmed":
+            to_add = self.stemmed_tokens
+        self.vocabulary = list(set(to_add))
+        self.vocabulary.sort()
+
+# WORD FREQUENCY GENERATION 
+    def get_word_frequencies(self, token_type = "dirty"):
+        """ 
+        outputs word frequency dictionary (by default with dirty tokens)
+        if token_type is "clean" then word frequency is done one clean tokens
+        it token_type is "stemmed" then word frequency is done on stemmed tokens 
+        """
+        self.is_tokenized()
+        to_add = self.dirty_tokens
+        if token_type == "clean":
+            to_add = self.tokens
+        elif token_type == "stemmed":
+            to_add = self.stemmed_tokens
+        
+        word_frequencies = {} # dictionary for word frequencies
+        # adding tokens in a word frequency dictionary
+        for token in to_add:
+            if not(token in word_frequencies.keys()): 
+                word_frequencies[token] = to_add.count(token)
+        # sorting word frequency
+        word_frequencies = dict(sorted(word_frequencies.items(), key=lambda x: x[1], reverse=True))
+        return word_frequencies
+
+# FUNCTIONS ON TOKEN NORMALIZATION
     def stem_tokens(self):
+        """
+        Function to stem all the tokens using the Porter Stemmer.
+        """
         i = 0
         while i < len(self.tokens):
             stemmer = PorterStemmer()
-            self.tokens[i] = stemmer.stem(self.tokens[i])
+            self.stemmed_tokens.append(stemmer.stem(self.tokens[i]))
             i = i + 1
+        return self.stemmed_tokens
 
-    def normalize(self):
-        self.lower_tokens()
-
-    # function to expand clitics (e.g. we're -> we are)
     def expand_clitics(self):
+        """
+        Function to expand clitics (e.g. we're -> we are)
+        """
         self.is_tokenized()
         i = 0
         while i < len(self.tokens):
@@ -194,6 +224,7 @@ class NLP:
                 expansion = contractions_lex[self.tokens[i]]
                 self.tokens = self.tokens[0:i] + expansion + self.tokens[i+1:]
                 i = i + len(expansion)
+                continue
             # in the case a token ends with 's expand it as 'is' (e.g. "there's" -> "there is")
             elif len(self.tokens[i]) > 2 and self.tokens[i][-2:] == "'s":
                 expansion = [self.tokens[i][0:-2], 'is']
@@ -202,35 +233,58 @@ class NLP:
 
             i = i + 1
 
-    # make all tokens lower-case
     def lower_tokens(self):
+        """
+        Function to lower-case all tokens.
+        """
         i = 0
         while i < len(self.tokens):
             self.tokens[i] = self.tokens[i].lower()
             i = i + 1
 
-    def pipeline(self):
-        self.tokenize()
-        self.sentence_split()
-        self.lower_tokens()
-        self.clean_vocabulary()
+    def clean_tokens(self):
+        """
+        Function to clean dirty_tokens. A clean token is one that starts with a number or a letter.
+        """
+        i = 0
+        while i < len(self.dirty_tokens):
+            character = self.dirty_tokens[i][0]
+            # if the first character of a dirty token is a number or a letter, add it to clean tokens
+            if self.is_letter(character) or self.is_number(character):
+                self.tokens.append(self.dirty_tokens[i])
+            i = i + 1
+    
+# PIPELINING THE CLASS
+    # def pipeline(self):
+    #     self.tokenize()
+    #     self.sentence_split()
+        
 
 # HELPER FUNCTIONS
-    # if text is not tokenized, tokenize it (used for sentence splitting and vocabulary making)
     def is_tokenized(self):
+        """
+        If text is not tokenized, tokenize it (used for sentence splitting and vocabulary making) as
+        it may be a prerequisite for an operation.
+        """
         if len(self.tokens) == 0:
             self.tokenize()
 
-    # if a character is a letter
     def is_letter(self, c):
+        """
+        Checks if a character is a letter.
+        """
         return self.is_lower_case(c) or self.is_upper_case(c)
     
-    # if a character is lower case
     def is_lower_case(self, c):
+        """
+        Checks if a character is a lower-case letter.
+        """
         return c >= 'a' and c <= 'z'
 
-    # if a character is upper case
     def is_upper_case(self, c):
+        """
+        Checks if a character is an upper-case letter
+        """
         return c >= 'A' and c <= 'Z'
 
     # if token has an entry from lexicon as substring return it
@@ -255,16 +309,20 @@ class NLP:
             return 
         return token[-1] in puncs
 
-    # if a character is a number
     def is_number(self, c):
+        """
+        Checks if a character is a number.
+        """
         return c >= '0' and c <= '9'
 
-    #if a token has a legit number inside like 4,3 or 4.56M
     def has_number(self, token):
+        """
+        Checks if a token has a "." or "," character followed or preceded by a number.
+        """
         i = 0
         while i < len(token):
             if token[i] == '.' or token[i] == ',':
-                if i > 0 and i < (len(token) - 1) and self.is_number(token[i-1]) and self.is_number(token[i+1]):
+                if i > 0 and i < (len(token) - 1) and (self.is_number(token[i-1]) or self.is_number(token[i+1])):
                     return True
             i = i + 1
         return False
@@ -273,16 +331,22 @@ class NLP:
     def has_abbreviation(self, token): 
         return len(token) > 1 and token[-1] == '.' and self.is_upper_case(token[-2])
     
-    #if token has @ (i.e. has email address) 
     def has_email (self, token):
+        """
+        Checks if a token has "@" inside of it (i.e. has an email address)
+        """
         return '@' in token
 
-    # if token has domain name
     def has_web_address (self, token):
+        """
+        Checks if a token has "http" or "www" as substring.
+        """
         return 'http' in token or 'www' in token
 
-    # if token has clitic
     def has_clitic (self, token):
+        """
+        Checks if a token has a clitic as a substring.
+        """
         i = 0
         while i < len(token):
             if i > 0 and i < (len(token) - 1) and token[i] == '\'':
