@@ -1,4 +1,5 @@
 from lexicons import * # getting the lexicons for contractions and abbreviations
+from PorterStemmer import *
 
 class NLP:
     rough_tokens = []
@@ -25,6 +26,7 @@ class NLP:
         self.word_frequency = {}
         self.stems = []
 
+    # rough tokenization where only whitespaces and newlines are removed from text
     def tokenize_rough(self):
         splitters = [' ', '\n'] # chars used for splitting words
         word = '' # where to store a single word
@@ -44,7 +46,8 @@ class NLP:
                 continue
             word = word + self.text[i] # adding letters to words
             i = i + 1
-        self.rough_tokens.append(word) # appending the last word in a text
+        if word != '':
+            self.rough_tokens.append(word) # appending the last word in a text
     
     def tokenize(self):
         self.tokenize_rough() # do the rough tokenization first
@@ -62,6 +65,7 @@ class NLP:
                     i = i + 1
             else:
                 i = i + 1
+        self.expand_clitics() # expanding clitics after tokenization
 
     def sentence_split(self):
         self.is_tokenized()
@@ -170,9 +174,17 @@ class NLP:
         for word in removed_words:
             del self.word_frequency[word]
 
-    def normalize(self):
-        print("to come")
+    def stem_tokens(self):
+        i = 0
+        while i < len(self.tokens):
+            stemmer = PorterStemmer()
+            self.tokens[i] = stemmer.stem(self.tokens[i])
+            i = i + 1
 
+    def normalize(self):
+        self.lower_tokens()
+
+    # function to expand clitics (e.g. we're -> we are)
     def expand_clitics(self):
         self.is_tokenized()
         i = 0
@@ -190,10 +202,17 @@ class NLP:
 
             i = i + 1
 
+    # make all tokens lower-case
+    def lower_tokens(self):
+        i = 0
+        while i < len(self.tokens):
+            self.tokens[i] = self.tokens[i].lower()
+            i = i + 1
+
     def pipeline(self):
         self.tokenize()
         self.sentence_split()
-        self.expand_clitics()
+        self.lower_tokens()
         self.clean_vocabulary()
 
 # HELPER FUNCTIONS
@@ -232,6 +251,8 @@ class NLP:
     # if the last character of a token is a punctuation sign
     def has_punctuation_at_end(self, token):
         puncs = ['.', '!', '?']
+        if len(token) == 0:
+            return 
         return token[-1] in puncs
 
     # if a character is a number
