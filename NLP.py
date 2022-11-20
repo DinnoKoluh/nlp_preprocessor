@@ -75,6 +75,7 @@ class NLP:
         self.lower_tokens() # case lowering for tokens
         self.expand_clitics() # clitics expansion after token lowering (for cases like don't -> do not, Don't -> Don't)
         self.stem_tokens() # stemming tokens
+        self.remove_stopwords()
 
 # FUNCTIONS ON TOKEN EDITING
     def split_token(self, token, puncs):
@@ -148,6 +149,7 @@ class NLP:
         """
         Splitting the input text into a list of sentences.
         """
+        self.sentences = []
         self.is_tokenized()
         # using the rough_tokens rebuilding the text again and splitting it into sentences based on rules
         sentence = ''
@@ -165,18 +167,25 @@ class NLP:
             else:
                 sentence = sentence + self.rough_tokens[i] + ' ' # concatenating tokens with whitespace
             i = i + 1
+        # in case the sentence doesn't end with a punctuation add it
+        if sentence != "":
+            self.sentences.append(sentence[0:-1]) 
         return self.sentences
 
 # VOCABULARY MAKING
     def make_vocabulary(self, token_type = "clean"):
         """
         makes a sorted vocabulary from the available tokens with clean tokens by default
-        if token_type is set to "stemmed" then the vocabulary is made from stemmed tokens
+        if token_type is set to "stemmed" then the vocabulary is made from stemmed tokens,
+        if token_type is set to "pruned" then the vocabulary is made from token for which 
+        stop-words were removed.
         """
         self.is_tokenized()
         to_add = self.tokens
         if token_type == "stemmed":
             to_add = self.stemmed_tokens
+        elif token_type == "pruned":
+            to_add = self.pruned_tokens
         self.vocabulary = list(set(to_add))
         self.vocabulary.sort()
 
@@ -204,7 +213,7 @@ class NLP:
         return word_frequencies
 
 # STOP-WORD REMOVING
-    def remove_stopwords(self, token_type = "stemmed"):
+    def remove_stopwords(self):
         """
         Function to remove stop-words from clean tokens.
         """

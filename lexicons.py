@@ -1,4 +1,4 @@
-abbreviations_lex = ['m.p.h.', 'mr.', 'Mr.', 'Mrs.', 'i.e.', 'fig.', 'Fig.', 'al.']
+abbreviations_lex = ['m.p.h.', 'mr.', 'Mr.', 'Mrs.', 'i.e.', 'fig.', 'Fig.', 'al.', 'e.g.']
 
 stopword_lex =  ["ourselves", "hers", "between", "yourself", "but", "again", "there", 
 "about", "once", "during", "out", "very", "having", "with", "they", "own", "an", "be", 
