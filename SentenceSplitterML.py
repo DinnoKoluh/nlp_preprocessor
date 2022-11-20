@@ -1,21 +1,18 @@
-from NLP import *
+from AbstractNLP import *
 from sklearn.linear_model import LogisticRegression
 import csv
 
-class NLP_ML(NLP):
+class SentenceSplitterML(AbstractNLP):
     """
-    Class for tokenization and sentence splitting using Machine Learning.
+    Class for sentence splitting using Machine Learning.
     """
     punctuations = ['.', '!', '?']
-    stand_text = ""
-    dataset_features = []
-    dataset_targets = []
     
     def __init__(self):
         pass
 
-# TRAINING DATASET COMPILATION
-    def make_feature(self, sample_list):
+# FEATURE/CLASS COMPILATION
+    def get_features(self, sample_list):
         """
         Function for feature compilation. To see the composition of sample list
         look at get_samples function.
@@ -67,19 +64,6 @@ class NLP_ML(NLP):
             features[7] = 1
         return features
 
-    def standardize_text(self, txt):
-        """
-        Function used to standardize a text which means that all occurrences
-        of newlines and multiple whitespaces will be deleted. This is done by
-        just concatenating rough tokens with a whitespace in between.
-        """
-        self.stand_text = ""
-        self.text = txt
-        self.tokenize_rough()
-        for token in self.rough_tokens:
-            self.stand_text = self.stand_text + token + " "
-        self.stand_text = self.stand_text[0:-1] # eliminate the last " " from the for loop
-
     def get_samples(self, txt):
         """
         Function used to get samples from a text. A sample in this case is a list
@@ -113,7 +97,7 @@ class NLP_ML(NLP):
     def make_dataset(self, txt):
         """
         Function used to compile the actual dataset. The dataset consists of features 
-        defined in the make_feature function and targets which are binary class labels 
+        defined in the get_features function and targets which are binary class labels 
         which tell us if the punctuation inside the sample should be a sentence splitter.
         We find that out by the rule based sentence splitter in the super class.
         """
@@ -130,7 +114,7 @@ class NLP_ML(NLP):
         target_text = target_text[0:-1] # removing the last new line
 
         for sample in samples:
-            features.append(self.make_feature(sample)) # appending features
+            features.append(self.get_features(sample)) # appending features
             # if the character after the index of the punctuation sign is "\n", it means that that punctuation sign is a sentence splitter
             # so assign 1 as its class, otherwise 0
             if sample[3]+1 < len(target_text) and target_text[sample[3]+1] == "\n":
@@ -138,43 +122,21 @@ class NLP_ML(NLP):
             else:
                 targets.append(0)  
         # save training dataset as .csv file
-        with open('dataset.csv', 'w', newline='') as f:
-            write = csv.writer(f)
-            write.writerow(['F0', 'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'Class']) # header
-            to_write = [] # the matrix that is going to be written in the .csv file, features + targets
-            i = 0
-            while i < len(features):
-                to_write.append(features[i]+[targets[i]])
-                i = i + 1
-            write.writerows(to_write)    
-        #return samples, features, targets  
+        header = ['F0', 'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'Class']
+        self.save_dataset('data\dataset.csv', features, targets, header)  
 
-    def load_dataset(self):
-        """
-        Function for loading the training set from "dataset.csv".
-        """
-        reader = csv.reader(open("dataset.csv", "r"))
-        output = list(reader)
-        output = output[1:] 
-        X = [] # features
-        y = [] # targets
-        for out in output:
-            X.append(out[0:-1])
-            y.append(out[-1])
-        return X, y
-
-# ACTUAL SENTENCE SPLITTING
+# SENTENCE SPLITTING
     def sentence_split_ml(self, txt):
         """
         Main function for sentence splitting using Logistical Regression.
         Training dataset required for fitting.
         """
-        X, y = self.load_dataset() # loading training data
+        X, y = self.load_dataset('data\dataset.csv') # loading training data
         clf = LogisticRegression(random_state=0).fit(X, y)
         samples = self.get_samples(txt) # samples of the input text
         features = [] # features of the input text
         for sample in samples:
-            features.append(self.make_feature(sample))
+            features.append(self.get_features(sample))
         targets = clf.predict(features) # predicting targets for input text
         probabilities = clf.predict_proba(features) # predicting target probabilities for input text
         print(targets)
