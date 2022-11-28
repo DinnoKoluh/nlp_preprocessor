@@ -123,7 +123,7 @@ class SentenceSplitterML(AbstractNLP):
                 targets.append(0)  
         # save training dataset as .csv file
         header = ['F0', 'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'Class']
-        self.save_dataset('data\dataset.csv', features, targets, header)  
+        self.save_dataset('data\dataset_sentences.csv', features, targets, header)  
 
 # SENTENCE SPLITTING
     def sentence_split_ml(self, txt):
@@ -131,7 +131,7 @@ class SentenceSplitterML(AbstractNLP):
         Main function for sentence splitting using Logistical Regression.
         Training dataset required for fitting.
         """
-        X, y = self.load_dataset('data\dataset.csv') # loading training data
+        X, y = self.load_dataset('data\dataset_sentences.csv') # loading training data
         clf = LogisticRegression(random_state=0).fit(X, y)
         samples = self.get_samples(txt) # samples of the input text
         features = [] # features of the input text
@@ -153,7 +153,7 @@ class SentenceSplitterML(AbstractNLP):
                 cursor = sample[3] + 1 # move the cursor to the beginning of the next sentence
         # in the case the the text only contains one sentence
         if len(sentences) == 0:
-            sentences.append(self.stand_txt)
+            sentences.append(self.stand_text)
         # adding the last sentence in the cases the cursor is not at the end of the text
         if cursor != len(self.stand_text):
             sentences.append(self.stand_text[cursor:])

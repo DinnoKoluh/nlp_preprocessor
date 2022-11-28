@@ -14,8 +14,8 @@ class AbstractNLP(NLP):
         X = [] # features
         y = [] # targets
         for out in output:
-            X.append(out[0:-1])
-            y.append(out[-1])
+            X.append([int(i) for i in out[0:-1]])
+            y.append(int(out[-1]))
         return X, y
 
     def save_dataset(self, name, features, targets, header):

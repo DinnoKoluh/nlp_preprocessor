@@ -1,6 +1,8 @@
-abbreviations_lex = ['m.p.h.', 'mr.', 'Mr.', 'Mrs.', 'i.e.', 'fig.', 'Fig.', 'al.', 'e.g.']
+abbreviations_lex = ['m.p.h.', 'mr.', 'Mr.', 'Mrs.', 'i.e.', 'fig.', 'Fig.', 'al.', 'e.g.', 'U.S.A.', 'U.S.']
 
-mwe_lex = ['new york city', 'san francisco']
+mwe_lex = ['new york city', 'san francisco', 'united states']
+
+normalization_lex = [["u.s.a.", "u.s.", "united states", "usa"], ["great britain", "gb", "britain"]]
 
 stopword_lex =  ["ourselves", "hers", "between", "yourself", "but", "again", "there", 
 "about", "once", "during", "out", "very", "having", "with", "they", "own", "an", "be", 

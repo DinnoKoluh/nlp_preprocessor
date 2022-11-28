@@ -29,8 +29,10 @@ class NLP:
         self.text = []
         self.vocabulary = []
 
-    # rough tokenization where only whitespaces and newlines are removed from text
     def tokenize_rough(self):
+        """
+        Rough tokenization where only whitespaces and newlines are removed from text.
+        """
         splitters = [' ', '\n'] # chars used for splitting words
         word = '' # where to store a single word
         self.rough_tokens = [] 
@@ -54,6 +56,11 @@ class NLP:
             self.rough_tokens.append(word) # appending the last word in a text
     
     def tokenize(self):
+        """
+        Main tokenization function. Apart from just tokenization it also cleans tokens
+        from punctuations, expands clitics, does case-lowering, rebuild MWE, stems tokens
+        and removes stopwords by building different token lists (lookup the attributes of the class).
+        """
         self.tokenize_rough() # do the rough tokenization first
         self.dirty_tokens = list(self.rough_tokens) # for a shallow copy
         i = 0
@@ -76,6 +83,7 @@ class NLP:
         self.expand_clitics() # clitics expansion after token lowering (for cases like don't -> do not, Don't -> Don't)
         self.rebuildMWEs() # rebuilding MWEs
         self.stem_tokens() # stemming tokens
+        self.normalize() # final lexicon normalization
         self.remove_stopwords()
 
 # FUNCTIONS ON TOKEN EDITING
@@ -111,7 +119,7 @@ class NLP:
         if self.has_email(token): return self.split_by_char(token, '@', self.email_puncs)
         substr = self.get_token_lex_substring(token)
         if len(substr) > 0: return self.split_by_string(token, substr, self.email_puncs)
-        if self.has_web_address(token): return sub_tokens
+        if self.has_web_address(token): return self.clean_from_puncs(token) #sub_tokens # self.split_by_char(token, '.', self.email_puncs)
 
         j = 0
         while j < len(token):
@@ -139,6 +147,7 @@ class NLP:
                 if self.is_letter(token[i-1]) and self.is_letter(token[i+1]):
                     break
             i = i + 1
+        if i == len(token): return token # case when the character is at the end of the token
         # done recursively for an arbitrary number of characters in token
         sub_tokens1 = self.split_token(token[0:i], puncs) # take the string up to the first appearance of character and split it
         sub_tokens2 = self.split_token(token[i+1:], puncs) # take the string after the first appearance of character and split it
@@ -309,11 +318,41 @@ class NLP:
                 self.tokens.append(self.dirty_tokens[i])
             i = i + 1
     
-# PIPELINING THE CLASS
-    # def pipeline(self):
-    #     self.tokenize()
-    #     self.sentence_split()
-        
+    def clean_from_puncs(self, token):
+        """
+        Takes in a token, and removes from the beginning and ending
+        punctuation signs. Returns subtokens as a token of beginning 
+        punctuations, the alphanumerical token and token of ending punctuations.
+        """
+        beginnings = ""
+        endings = ""
+        # for beginnings
+        while not(self.is_number(token[0]) or self.is_letter(token[0])):
+            beginnings = beginnings + token[0]
+            token = token[1:]
+        # for endings
+        while not(self.is_number(token[-1]) or self.is_letter(token[-1])):
+            endings = endings + token[-1]
+            token = token[0:-1]
+        subtokens = [beginnings] + [token] + [endings]
+        if len(beginnings) == 0: subtokens = subtokens[1:]
+        if len(endings) == 0: subtokens = subtokens[0:-1]
+        return subtokens       
+
+    def normalize(self):
+        """
+        Using the normalization lexicon words with different forms
+        replaced by a single one (e.g. "USA", "U.S.", "U.S.A", "United States" => "usa")
+        """
+        i = 0
+        while i < len(self.tokens):
+            j = 0
+            while j < len(normalization_lex):
+                if self.tokens[i] in normalization_lex[j]:
+                    self.tokens[i] = normalization_lex[j][-1] # replace the token with the last entry in the normalization lexicon
+                    break
+                j = j + 1
+            i = i + 1
 
 # HELPER FUNCTIONS
     def is_tokenized(self):
@@ -369,6 +408,12 @@ class NLP:
         Checks if a character is a number.
         """
         return c >= '0' and c <= '9'
+
+    def is_alphanumeric(self, c):
+        """
+        Is the given character an alphanumeric value.
+        """
+        return self.is_number(c) or self.is_letter(c)
 
     def has_number(self, token):
         """

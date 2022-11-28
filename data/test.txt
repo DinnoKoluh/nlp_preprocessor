@@ -1,1 +1,6 @@
-You can't find Mr. Nobody N. in New York City. Since 22/11/1996, the only way is at mr_nobody@gmail.com (or at his website).
+You can't find Mr. Nobody N. in New York City. Since 22/11/1996, U.S.A. and United States
+the only way is at mr_nobody@gmail.com (or at his website: www.mr_nobody.com).
+
+Invalid of the form user@enron.com., whenever possible (i.e., recipient is specified 
+in some parse-able format like "Doe, John" or "Mary K. Smith" at http://www.stanford.edu). 
+But 10.8$ is enough for us! I drove 50 m.p.h. and got a speeding ticket? Not possible!!

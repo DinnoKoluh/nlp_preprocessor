@@ -2,4 +2,4 @@ TO Do
 - MWE lexicon
 - Dynamic stopword approach
 - Normalization lexicon?
-- NaiveBayes and Logistic regression
+- NaiveBayes
