@@ -74,10 +74,29 @@ class NLP:
         self.expand_clitics() # clitics expansion before token lowering (for cases like I'd -> I would, i'd -> i'd)
         self.lower_tokens() # case lowering for tokens
         self.expand_clitics() # clitics expansion after token lowering (for cases like don't -> do not, Don't -> Don't)
+        self.rebuildMWEs() # rebuilding MWEs
         self.stem_tokens() # stemming tokens
         self.remove_stopwords()
 
 # FUNCTIONS ON TOKEN EDITING
+    def rebuildMWEs(self):
+        """
+        Function used to rebuild split MWE. 
+        Rebuilding them into a single token and adding them back to the token list.
+        Works for an arbitrary number of words in a single token.
+        (e.g. it works in this fashion: "new", "york", "city" => "new york", "city" => "new york city")
+        """
+        i = 0
+        while i < len(self.tokens)-1:
+            j = 0
+            while j < len(mwe_lex) and i < len(self.tokens)-1:
+                if self.tokens[i] in mwe_lex[j] and self.tokens[i+1] in mwe_lex[j]:
+                    self.tokens[i] = self.tokens[i] + " " + self.tokens[i+1]
+                    del self.tokens[i+1]
+                    j = j - 1
+                j = j + 1
+            i = i + 1
+
     def split_token(self, token, puncs):
         """
         Main function which splits a single rough token into subtokens. 

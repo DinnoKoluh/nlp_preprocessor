@@ -1,14 +1,1 @@
-thanks to them (not me)
-  that the dataset is available. The include attachments, e.g. and been deleted.
-The train-test split procedure is used to estimate the performance of machine 
-learning algorithms when they are used to make predictions on data not used to train the model.
-
-It is a fast and easy procedure to perform, the results of which allow you to 
-compare the performance of machine learning algorithms for your predictive 
-modeling problem. Although simple to use and interpret, there are times when 
-the procedure should not be used, such as when you have a small dataset and 
-situations where additional configuration is required, such as when it is used for classification and the dataset is not balanced.
-
-In this tutorial, you will discover how to evaluate machine learning models using the train-test split.
-
-Hello world. Hello world again Mr. Dinno on fig. 4! It's me.
+You can't find Mr. Nobody N. in New York City. Since 22/11/1996, the only way is at mr_nobody@gmail.com (or at his website).
