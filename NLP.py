@@ -140,14 +140,14 @@ class NLP:
         the string will be split as ["example@gmail.com", ",", "done"].
         """
         sub_tokens = []
-        i = 0
+        i = 1
         # Find the position of the first appearance of character
-        while i < len(token):
-            if i > 0 and i < (len(token) - 1) and token[i] == character:
-                if self.is_letter(token[i-1]) and self.is_letter(token[i+1]):
-                    break
+        while i < len(token)-1:
+            #if i > 0 and i < (len(token) - 1) and token[i] == character:
+            if token[i] == character and self.is_letter(token[i-1]) and self.is_letter(token[i+1]):
+                break
             i = i + 1
-        if i == len(token): return token # case when the character is at the end of the token
+        if i == (len(token) - 1): return [token] 
         # done recursively for an arbitrary number of characters in token
         sub_tokens1 = self.split_token(token[0:i], puncs) # take the string up to the first appearance of character and split it
         sub_tokens2 = self.split_token(token[i+1:], puncs) # take the string after the first appearance of character and split it
@@ -157,6 +157,8 @@ class NLP:
             # first element of subtokens_2 concatenated together with the character in middle (e.g. example + @ + com)
         # sub_tokens2[1:] -> subtokens after the first appearance of character
         # e.g. [',', ':'] + [example + @ + gmail.com] + [':']
+        if len(sub_tokens2) == 0 or len(sub_tokens1) == 0:
+            return [token]
         return sub_tokens1[0:-1] + [sub_tokens1[-1] + character + sub_tokens2[0]] + sub_tokens2[1:]
     
     def split_by_string(self, token, string, puncs):
