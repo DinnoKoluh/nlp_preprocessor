@@ -1,5 +1,5 @@
 from AbstractNLP import *
-from sklearn.naive_bayes import GaussianNB, MultinomialNB, CategoricalNB
+from sklearn.naive_bayes import MultinomialNB
 
 class TokenizerML(AbstractNLP):
     """
@@ -84,11 +84,11 @@ class TokenizerML(AbstractNLP):
             wsize = 12
             left = i - wsize
             right = i + wsize
-            if left < 0: left = 0
-            if right > len(sample): right = len(sample)
-            self.text = sample[left:right]
+            if left < 0: left = 0 # boundary condition for left side of the window
+            if right > len(sample): right = len(sample) # boundary condition for the right side of the window
+            self.text = sample[left:right] # taking a sample from the text
             self.tokenize() # splitting token bounded by the moving window
-            if sample[i] in self.dirty_tokens: targets.append(1)
+            if sample[i] in self.dirty_tokens: targets.append(1) # if the character is a dirty token then it should be a splitter
             else: targets.append(0)
             i = i + 1
         # save training dataset as .csv file
@@ -102,6 +102,7 @@ class TokenizerML(AbstractNLP):
         Main function for tokenization using NaiveBayes.
         Training dataset required for fitting.
         """
+        #*note: I did not have the time to build the classifier from scratch, so I used the sklearn one).
         X, y = self.load_dataset('data\dataset_tokenization.csv') # loading training data
         gnb = MultinomialNB()
         self.standardize_text(txt)
@@ -110,11 +111,11 @@ class TokenizerML(AbstractNLP):
         while i < len(self.stand_text):
             features.append(self.get_features(self.stand_text, i))
             i = i + 1
-        targets = gnb.fit(X, y).predict(features)
+        targets = gnb.fit(X, y).predict(features) # fitting
         probabilities = gnb.predict_proba(features)
         tokens = []
         current_token = ""
-        
+        # building token list from the obtained targets
         for target, char in zip(targets, self.stand_text):
             if target == 1:
                 if current_token != "": tokens.append(current_token)

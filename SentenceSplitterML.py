@@ -1,6 +1,5 @@
 from AbstractNLP import *
 from sklearn.linear_model import LogisticRegression
-import csv
 
 class SentenceSplitterML(AbstractNLP):
     """
@@ -148,7 +147,7 @@ class SentenceSplitterML(AbstractNLP):
             # if the target is '1' split sentence from the standardized text.
             # it is split from the position of the cursor until the punctuation index which 
             # was kept inside the sample list at position 3
-            if target == '1':
+            if target == 1:
                 sentences.append(self.stand_text[cursor:sample[3]+1])
                 cursor = sample[3] + 1 # move the cursor to the beginning of the next sentence
         # in the case the the text only contains one sentence

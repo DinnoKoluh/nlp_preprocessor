@@ -1,6 +1,7 @@
-abbreviations_lex = ['m.p.h.', 'mr.', 'Mr.', 'Mrs.', 'i.e.', 'fig.', 'Fig.', 'al.', 'e.g.', 'U.S.A.', 'U.S.']
+# abbreviations_lex, mwe_lex, normalization_lex => should be expanded to the domain of the user 
+abbreviations_lex = ['m.p.h.', 'mr.', 'Mr.', 'Mrs.', 'i.e.', 'fig.', 'Fig.', 'al.', 'e.g.', 'U.S.A.', 'U.S.', 'a.k.a.']
 
-mwe_lex = ['new york city', 'san francisco', 'united states']
+mwe_lex = ['new york city', 'san francisco', 'united states', 'great britain']
 
 normalization_lex = [["u.s.a.", "u.s.", "united states", "usa"], ["great britain", "gb", "britain"]]
 

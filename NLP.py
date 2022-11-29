@@ -383,23 +383,29 @@ class NLP:
         """
         return c >= 'A' and c <= 'Z'
 
-    # if token has an entry from lexicon as substring return it
     def get_token_lex_substring(self, token):
+        """
+        If token has an entry from lexicon as substring return it.
+        """
         for l in abbreviations_lex:
             if l in token:
                 return l
         return ''
 
-    # if a token has a punctuation 
     def has_punctuation(self, token):
+        """
+        If a token has a punctuation.
+        """
         puncs = ['.', '!', '?']
         for pun in puncs:
             if pun in token:
                 return True
         return False
     
-    # if the last character of a token is a punctuation sign
     def has_punctuation_at_end(self, token):
+        """
+        Checks if the last character of a token is a punctuation sign
+        """
         puncs = ['.', '!', '?']
         if len(token) == 0:
             return 
@@ -429,8 +435,10 @@ class NLP:
             i = i + 1
         return False
 
-    #if the end of the token is an abbreviation for a name i.e. in the form "D.K."
     def has_abbreviation(self, token): 
+        """
+        Checks if the end of the token is an abbreviation for a name i.e. in the form "D.K."
+        """
         return len(token) > 1 and token[-1] == '.' and self.is_upper_case(token[-2])
     
     def has_email (self, token):
