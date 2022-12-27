@@ -1,0 +1,5 @@
+['VB', 'Verb', 'VP']     []                       ['S', 'VP']              []                       ['S', 'VP', 'S', 'VP']   
+[]                       ['DT', 'Det']            ['NP']                   []                       ['NP']                   
+[]                       []                       ['NN', 'Noun', 'Nominal'][]                       ['Nominal']              
+[]                       []                       []                       ['IN', 'Prep']           ['PP']                   
+[]                       []                       []                       []                       ['NNP', 'NP']            
