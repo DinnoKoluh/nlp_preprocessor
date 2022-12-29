@@ -1,7 +1,7 @@
 # Penn Treebank tagset: https://www.ling.upenn.edu/courses/Fall_2003/ling001/penn_treebank_pos.html
 rules = {
     "S": [["NP", "VP"], ["Aux", "NP", "VP"], ["Verb", "NP"], ["VP", "PP"]],
-    "NP": [["Det", "Nominal"], ["Pronoun"], ["Pronoun", "Nominal"], ["Det", "Adjective"], ["Adjective", "Noun"], ["NNP"]],
+    "NP": [["Det", "Nominal"], ["Pronoun"], ["Pronoun", "Nominal"], ["Det", "Adjective"], ["Adjective", "Noun"], ["NNP"], ["Nominal", "NP"]],
     "VP": [["Verb"], ["Verb", "NP"], ["Verb", "Noun"], ["VP", "PP"], ["Verb", "NP", "PP"], ["Verb", "PP"]],
     "PP": [["Prep", "NP"], ["Prep", "Nominal"]],
     "Nominal": [["Nominal", "Noun"], ["Nominal", "PP"], ["Noun"], ["Adjective", "Nominal"]],
