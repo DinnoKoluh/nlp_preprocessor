@@ -3,6 +3,7 @@ import nltk
 from grammar import *
 from IPython.display import display
 import math
+import copy
 
 class Parser:
     def __init__(self, text):
@@ -14,12 +15,14 @@ class Parser:
         self.parsed_text = nltk.pos_tag(self.tokens)
         self.table = [[[] for i in range(len(self.tokens))] for j in range(len(self.tokens))]
         self.links_table = [[[] for i in range(len(self.tokens))] for j in range(len(self.tokens))]
+        self.grammar_rules = self.CFG2CNF(rules)
     
     def reset(self):
         self.text = []
         self.parsed_text = []
         self.tokens = []
         self.links_table = []
+        self.grammar_rules = {}
 
     def get_all_tags(self, index):
         """
@@ -51,8 +54,8 @@ class Parser:
         indices = [] # where the indices of the chosen constituents will be stored 
         s = 0
         for p in product:
-            for key in rules.keys():
-                for rule in rules[key]:
+            for key in self.grammar_rules.keys():
+                for rule in self.grammar_rules[key]:
                     if rule == p: # and not(key in tags): # if the rule is among the product add it to the tags
                         tag_rules.append(p)
                         tags.append(key)
@@ -139,9 +142,31 @@ class Parser:
 
         # recursively call this function with the two children nodes as inputs
         if mode == "bracket":
-            return f"[{node[2]} {self.gen_tree(node1)} {self.gen_tree(node2)}]"
+            # case where we have a CNF rule
+            if node[2][0] == "X":
+                return f"{self.gen_tree(node1)} {self.gen_tree(node2)}"
+            else:
+                return f"[{node[2]} {self.gen_tree(node1)} {self.gen_tree(node2)}]"
         elif mode == "graph":
-            return nltk.Tree(node[2], [self.gen_tree(node1, mode), self.gen_tree(node2, mode)])
+            # case where we have a CNF rule
+            if node1[2][0] == "X":
+                # skipping node1 and directly extracting it's children
+                child1_index = node1[0][0:3]
+                child2_index = node1[1][0:3]
+                child1 = []
+                child2 = []
+                if child1_index[0] == child1_index[1]:
+                    child1 = [-1, node1[0][3], self.tokens[child1_index[0]]]
+                else:
+                    child1 = self.links_table[child1_index[0]][child1_index[1]][child1_index[2]]
+                
+                if child2_index[0] == child2_index[2]:
+                    child2 = [-1, node1[1][3], self.tokens[child2_index[0]]]
+                else:
+                    child2 = self.links_table[child2_index[0]][child2_index[1]][child2_index[2]]
+                return nltk.Tree(node[2], [self.gen_tree(child1, mode), self.gen_tree(child2, mode), self.gen_tree(node2, mode)])
+            else:
+                return nltk.Tree(node[2], [self.gen_tree(node1, mode), self.gen_tree(node2, mode)])
 
     def save_table(self, path):
         """
@@ -152,3 +177,18 @@ class Parser:
             for t in tab:
                 print("{0:25}".format(str(t)), file = f, end = "")
             print("", file=f) 
+
+    def CFG2CNF(self, rules):
+        """
+        Converting CFG to CNF grammar. 
+        """
+        grammar_rules = copy.deepcopy(rules)
+        i = 1
+        for key in list(grammar_rules.keys()):
+            for idx, rule in enumerate(grammar_rules[key]):
+                if len(rule) > 2:
+                    grammar_rules['X'+str(i)] = [rule[0:-1]]
+                    grammar_rules[key][idx] = ['X'+str(i), rule[-1]]
+                    i = i + 1
+        # in the case of rules having length more than 3, this needs to change
+        return grammar_rules
