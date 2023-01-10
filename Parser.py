@@ -145,6 +145,7 @@ class Parser:
             # case where we have a CNF rule
             if node[2][0] == "X":
                 return f"{self.gen_tree(node1)} {self.gen_tree(node2)}"
+            # cases with just CFG rules
             else:
                 return f"[{node[2]} {self.gen_tree(node1)} {self.gen_tree(node2)}]"
         elif mode == "graph":
@@ -160,11 +161,12 @@ class Parser:
                 else:
                     child1 = self.links_table[child1_index[0]][child1_index[1]][child1_index[2]]
                 
-                if child2_index[0] == child2_index[2]:
+                if child2_index[0] == child2_index[1]:
                     child2 = [-1, node1[1][3], self.tokens[child2_index[0]]]
                 else:
                     child2 = self.links_table[child2_index[0]][child2_index[1]][child2_index[2]]
                 return nltk.Tree(node[2], [self.gen_tree(child1, mode), self.gen_tree(child2, mode), self.gen_tree(node2, mode)])
+            # cases with just CFG rules
             else:
                 return nltk.Tree(node[2], [self.gen_tree(node1, mode), self.gen_tree(node2, mode)])
 
@@ -175,7 +177,7 @@ class Parser:
         f = open(path,'w')
         for tab in self.table:
             for t in tab:
-                print("{0:25}".format(str(t)), file = f, end = "")
+                print("{0:31}".format(str(t)), file = f, end = "")
             print("", file=f) 
 
     def CFG2CNF(self, rules):
