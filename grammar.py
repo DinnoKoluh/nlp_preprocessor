@@ -1,4 +1,5 @@
 # Penn Treebank tagset: https://www.ling.upenn.edu/courses/Fall_2003/ling001/penn_treebank_pos.html
+#https://github.com/Huntersxsx/CKY-Parser/blob/master/CKY/CKY.py
 rules = {
     "S": [["NP", "VP"], ["Aux", "NP", "VP"], ["Verb", "NP"], ["VP", "PP"]],
     "NP": [["Det", "Nominal"], ["Pronoun"], ["Pronoun", "Nominal"], ["Det", "Adjective"], ["Adjective", "Noun"], 

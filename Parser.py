@@ -107,8 +107,7 @@ class Parser:
             print(tree)
             display(v_tree)
             #v_trees.draw()
-            
-    
+
     def gen_tree(self, node, mode="bracket"):
         """
         Recursive approach to get the parse tree from the linking table.
@@ -151,7 +150,7 @@ class Parser:
         elif mode == "graph":
             # case where we have a CNF rule
             if node1[2][0] == "X":
-                # skipping node1 and directly extracting it's children
+                # skipping node1 and directly extracting its children
                 child1_index = node1[0][0:3]
                 child2_index = node1[1][0:3]
                 child1 = []
